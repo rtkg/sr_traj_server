@@ -1,0 +1,17 @@
+<package>
+  <description brief="sr_traj_server">
+
+     sr_traj_server
+
+  </description>
+  <author>rkg</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/sr_traj_server</url>
+  <depend package="roscpp"/>
+  <depend package="eigen"/>
+  <depend package="sr_robot_msgs"/>
+  <rosdep name="boost"/>
+</package>
+
+
