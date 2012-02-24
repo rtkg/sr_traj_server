@@ -1,0 +1,8 @@
+string file
+---
+bool success
+
+#file
+#==============
+#relative file path to the .txt file specifying the trajectory
+

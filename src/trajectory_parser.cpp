@@ -62,7 +62,7 @@ bool TrajectoryParser::parseFile(std::string const & file)
 	  ROS_ERROR("File %s has invalid headers",path.c_str());
           return false;
         }
-         
+
       joint_traj_->resize(rows_,cols_);      
 
       boost::split(splitted_string, line, boost::is_any_of("\t "));
@@ -91,4 +91,6 @@ unsigned int TrajectoryParser::getNumTraj(){return rows_;}
 unsigned int TrajectoryParser::getNumSamples(){return cols_;}
 //------------------------------------------------------------------------------------------------------
 double TrajectoryParser::getTimestep(){return delta_t_;}
+//------------------------------------------------------------------------------------------------------
+std::string TrajectoryParser::getTrajDir(){return traj_dir_;}
 //------------------------------------------------------------------------------------------------------

@@ -25,6 +25,7 @@ public:
   unsigned int getNumTraj();
   unsigned int getNumSamples();  
   double getTimestep();
+  std::string getTrajDir();
 
   TrajectoryParser(std::string traj_dir);
   ~TrajectoryParser();

@@ -1,0 +1,9 @@
+<launch>
+  <!-- Shadow Hand trajectory server -->
+  <node pkg="sr_traj_server" name="sr_trajectory_server" type="sr_traj_server" output="screen">
+    <param name="sendupdate_prefix" type="string" value="/srh/" />
+    <param name="server_prefix" type="string" value="sr_trajectory_server/" />
+    <param name="trajectory_dir" type="string" value="$(find sr_traj_server)/trajectories/" />
+  </node>
+</launch>
+

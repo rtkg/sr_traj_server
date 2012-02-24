@@ -1,1 +1,29 @@
-Trajectory server for the Shadow Hand
+Trajectory server for the Shadow Hand. Valid hand state trajectories have to be of size 20xN, where
+N describes the number of samples. See the example in the /trajectories folder. The joint ordering has to be:
+
+THJ1
+THJ2
+THJ3
+THJ4
+THJ5
+FFJ0
+FFJ3
+FFJ4
+MFJ0
+MFJ3
+MFJ4
+RFJ0
+RFJ3
+RFJ4
+LFJ0
+LFJ3
+LFJ4
+LFJ5
+WRJ1
+WRJ2 
+
+The server node publishes on /srh/sendupdate. The default trajectories folder can be specified in
+the sr_traj_server.launch file. Run the server via 'roslaunch sr_traj_server
+sr_traj_server.launch'. A service /sr_trajectory_server/replay_traj is provided which expects a
+string with the local filename, e.g., 'rosservice call /sr_trajectory_server/replay_traj
+"example_traj" '.
