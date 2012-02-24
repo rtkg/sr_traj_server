@@ -24,7 +24,7 @@ bool TrajectoryParser::parseFile(std::string const & file)
       return false;
     }
  
-  unsigned int row_id;
+  unsigned int row_id=0;
   std::string line;
   std::vector<std::string> splitted_string;
   while( !joint_traj_file.eof() )
@@ -41,9 +41,9 @@ bool TrajectoryParser::parseFile(std::string const & file)
       //check the headers
       if( line == "#Timestep" )
 	{
-        getline(joint_traj_file, line);
-        delta_t_= convertToDouble(line[0]);
-	continue;
+	  getline(joint_traj_file, line);
+	  delta_t_= convertToDouble(line); 
+	  continue;
 	}
       else if (line == "#Dimensions")
 	{
@@ -57,7 +57,7 @@ bool TrajectoryParser::parseFile(std::string const & file)
       else if (line == "#Joint trajectories")
 	continue;
 
-      if(rows_==0 || cols_==0 || timestep_==0)
+      if(rows_==0 || cols_==0 || delta_t_==0)
 	{
 	  ROS_ERROR("File %s has invalid headers",path.c_str());
           return false;
@@ -75,7 +75,7 @@ bool TrajectoryParser::parseFile(std::string const & file)
         }     
 
       for( unsigned int col_id = 0; col_id < cols_; ++col_id )
-	joint_traj_(row_id,col_id) = convertToDouble(splitted_string[col_id]);
+	(*joint_traj_)(row_id,col_id) = convertToDouble(splitted_string[col_id]);
 
       row_id+=1;
     }
