@@ -24,7 +24,10 @@ WRJ1
 WRJ2 
 
 The server node publishes on /srh/sendupdate. The default trajectories folder can be
-specified in the sr_traj_server.launch file. Run the server via 'roslaunch sr_traj_server
-sr_traj_server.launch'. A service /sr_trajectory_server/replay_traj is provided which 
-expects a string with the local filename, e.g., 
-'rosservice call /sr_trajectory_server/replay_traj "example_traj" '.
+specified in the sr_traj_server.launch file. Run the server via 
+'roslaunch sr_traj_server sr_traj_server.launch'. A service 
+/sr_trajectory_server/replay_traj is provided which expects a string with the local 
+filename, e.g., 'rosservice call /sr_trajectory_server/replay_traj "example_traj" '.
+Aforementioned launch file starts the Shadow Hand interface and the trajectory server.
+To visualize use Rviz: 'rosrun rviz rviz' and load the configuration file in the 
+/rviz_config folder.
