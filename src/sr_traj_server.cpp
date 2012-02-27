@@ -19,7 +19,7 @@ TrajectoryServer::TrajectoryServer() : nh_private_("~")
     std::string traj_dir;
     nh_private_.searchParam("trajectory_dir", param);
     nh_private_.param(param, traj_dir, std::string());
-    trajectory_parser_ = new TrajectoryParser(traj_dir);
+    trajectory_parser_ = new TrajectoryParser(traj_dir); //can create a stack smash
     
     ROS_INFO("Trajectory directory set to: %s", traj_dir.c_str());
 

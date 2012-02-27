@@ -50,6 +50,9 @@ bool TrajectoryParser::parseFile(std::string const & file)
           getline(joint_traj_file, line);
           boost::split(splitted_string, line, boost::is_any_of("\t "));
           splitted_string.erase( std::remove_if(splitted_string.begin(), splitted_string.end(), boost::bind( &std::string::empty, _1 )), splitted_string.end()); 
+
+          //Somewhat of a hack to cast the values from a double but otherwise an additional method
+          //convertToInt would be needed
           rows_=(unsigned int)convertToDouble(splitted_string[0]);
           cols_=(unsigned int)convertToDouble(splitted_string[1]);
 	  continue;
