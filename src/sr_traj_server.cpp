@@ -14,7 +14,6 @@ const unsigned int TrajectoryServer::number_hand_joints_ = 20;
 //-------------------------------------------------------------------
 TrajectoryServer::TrajectoryServer() : nh_private_("~")
 {
-
     std::string param;
     std::string traj_dir;
     nh_private_.searchParam("trajectory_dir", param);
@@ -109,6 +108,7 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
   Eigen::VectorXd state_vec(number_hand_joints_);
   unsigned int sample_id=0;
   ros::Rate r(1/trajectory_parser_->getTimestep()); 
+
   unsigned int num_samples=trajectory_parser_->getNumSamples();
 
   while (ros::ok() && (sample_id < num_samples))
@@ -117,6 +117,7 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
     shadowhand_pub_.publish(generateMessage(state_vec));
     sample_id+=1;
     r.sleep();
+    //std::cout<<r.cycleTime()<<std::endl;
   }
 
   res.success=true;

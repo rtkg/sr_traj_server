@@ -8,7 +8,6 @@
 #include <ros/ros.h>
 #include "sr_traj_server/sr_traj_server.h"
 
-
   /////////////////////////////////
   //           MAIN              //
   /////////////////////////////////
@@ -23,3 +22,4 @@ int main(int argc, char** argv)
 
   return 0;
 }
+

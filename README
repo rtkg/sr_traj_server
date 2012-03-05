@@ -23,6 +23,7 @@ LFJ5
 WRJ1
 WRJ2 
 
+
 The server node publishes on /srh/sendupdate. The default trajectories folder can be
 specified in the sr_traj_server.launch file. Run the server via 
 'roslaunch sr_traj_server sr_traj_server.launch'. A service 
