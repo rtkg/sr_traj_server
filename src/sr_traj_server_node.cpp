@@ -18,7 +18,10 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "sr_traj_server");
 
   TrajectoryServer traj_server;
-  ros::spin();
+  ROS_INFO("Trajectory server started.");
+  
+  while(ros::ok())
+    traj_server.spin();
 
   return 0;
 }

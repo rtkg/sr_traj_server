@@ -23,5 +23,5 @@ rosbuild_gensrv()
 
 #Cybergrasp: uncomment this line if you want to use the cybergrasp
 #rosbuild_add_executable(cybergrasp_remapper src/shadowhand_to_cybergrasp_remapper.cpp src/shadowhand_to_cybergrasp_remapper_node.cpp src/calibration_parser.cpp)
-rosbuild_add_executable(sr_traj_server src/sr_traj_server.cpp src/sr_traj_server_node.cpp src/trajectory_parser.cpp)
+rosbuild_add_executable(sr_traj_server src/sr_traj_server.cpp src/sr_traj_server_node.cpp src/trajectory_parser.cpp src/finger.cpp)
 

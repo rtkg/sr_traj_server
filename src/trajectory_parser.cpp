@@ -87,13 +87,62 @@ bool TrajectoryParser::parseFile(std::string const & file)
   return true;
 }
 //------------------------------------------------------------------------------------------------------
-Eigen::MatrixXd* TrajectoryParser::getTrajectories(){return joint_traj_;}
+unsigned int TrajectoryParser::getNumTraj()
+{
+  unsigned int rows;
+  lock_.lock();
+  rows=rows_;
+  lock_.unlock();
+
+return rows;
+}
 //------------------------------------------------------------------------------------------------------
-unsigned int TrajectoryParser::getNumTraj(){return rows_;}
+unsigned int TrajectoryParser::getNumSamples()
+{
+  unsigned int cols;
+  lock_.lock();
+  cols=cols_;
+  lock_.unlock();
+
+return cols;
+}
 //------------------------------------------------------------------------------------------------------
-unsigned int TrajectoryParser::getNumSamples(){return cols_;}
+double TrajectoryParser::getTimestep()
+{
+  double delta_t;
+  lock_.lock();
+  delta_t=delta_t_;
+  lock_.unlock();
+
+return delta_t;
+}
 //------------------------------------------------------------------------------------------------------
-double TrajectoryParser::getTimestep(){return delta_t_;}
+std::string TrajectoryParser::getTrajDir()
+{
+  std::string traj_dir;
+  lock_.lock();
+  traj_dir=traj_dir_;
+  lock_.unlock();
+
+return traj_dir;
+}
 //------------------------------------------------------------------------------------------------------
-std::string TrajectoryParser::getTrajDir(){return traj_dir_;}
+Eigen::VectorXd TrajectoryParser::getStateVector(unsigned int sample)
+{
+  Eigen::VectorXd joint_states;
+
+  lock_.lock();
+  if(sample >= cols_)
+    {
+      sample=cols_-1;
+      ROS_WARN("Sample out of bounds - returning the last state vector");
+    }
+
+  joint_states.resize(rows_);
+  joint_states= joint_traj_->block(0,sample,rows_ ,1);
+
+  lock_.unlock();
+
+  return joint_states;
+}
 //------------------------------------------------------------------------------------------------------

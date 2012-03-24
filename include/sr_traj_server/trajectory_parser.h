@@ -15,20 +15,31 @@
 #include <string>
 #include <Eigen/Core>
 #include <fstream>
+#include <ros/ros.h>
+#include <boost/thread/mutex.hpp>
+#include <vector>
 
 class TrajectoryParser {
 
 public:
 
   bool parseFile(std::string const & file);
-  Eigen::MatrixXd* getTrajectories();
+
+  /**
+   * Returns a vector containing the joint angles of the hand at the given instance
+   *
+   * @param sample - between 1-N, where N is the number of samples for the trajectory
+   */
+  Eigen::VectorXd getStateVector(unsigned int sample);
   unsigned int getNumTraj();
   unsigned int getNumSamples();  
   double getTimestep();
   std::string getTrajDir();
+  boost::mutex lock_;
 
   TrajectoryParser(std::string traj_dir);
   ~TrajectoryParser();
+
 
 private:
 

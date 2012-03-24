@@ -1,4 +1,5 @@
 string file
+string[] contact_fingers #valid entries: TH,FF,MF,RF,LF - indicates which fingers have to be in contact in order to establish the grasp
 ---
 bool success
 

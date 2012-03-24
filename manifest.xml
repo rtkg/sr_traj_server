@@ -10,7 +10,9 @@
   <url>http://ros.org/wiki/sr_traj_server</url>
   <depend package="roscpp"/>
   <depend package="eigen"/>
+  <depend package="std_srvs"/>
   <depend package="sr_robot_msgs"/>
+  <depend package="icr"/>
   <rosdep name="boost"/>
 </package>
 

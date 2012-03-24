@@ -13,7 +13,20 @@
 #include <Eigen/Core>
 #include <boost/thread/mutex.hpp>
 #include "../srv_gen/cpp/include/sr_traj_server/replay_traj.h"
+#include "../srv_gen/cpp/include/sr_traj_server/Grasp.h"
 #include <sr_robot_msgs/sendupdate.h>
+#include <string>
+#include <map>
+#include "finger.h"
+#include <boost/shared_ptr.hpp>
+#include <std_srvs/Empty.h>
+
+#define THUMB        0
+#define FOREFINGER   1
+#define MIDDLEFINGER 2
+#define RINGFINGER   3
+#define LITTLEFINGER 4
+
 
 class TrajectoryServer
 {
@@ -22,21 +35,33 @@ class TrajectoryServer
   TrajectoryServer();
   ~TrajectoryServer();
 
+ void spin();
+
  private:
+
 
   ros::NodeHandle nh_, nh_private_;
   static const unsigned int number_hand_joints_;
-  TrajectoryParser* trajectory_parser_;
-  boost::mutex data_mutex_;
+  boost::shared_ptr<TrajectoryParser> trajectory_parser_;
+  boost::mutex lock_;
   std::vector<std::string> joint_names_; 
   ros::ServiceServer replay_traj_srv_;
+  ros::ServiceServer grasp_srv_;
+   ros::ServiceServer reset_hand_srv_;
   ros::Publisher shadowhand_pub_;
+  //std::map<std::string,unsigned int> joint_ordinals_; 
+  std::vector<Finger*> fingers_;
+  // void initJointOrdinals();
+ bool traj_loaded_;
+ double delta_t_;
+ std::vector<unsigned int> contact_fingers_;
 
-  /**
-   * Returns a vector containing the joint angles of the hand at the given instance
-   *
-   * @param sample - between 1-N, where N is the number of samples for the trajectory
-   */
+  int getJointId(std::string const & joint_name);
+  bool contactsEstablished();
+  bool completed();
+  void followTrajectories();
+  void initContactFingers();
+  
   Eigen::VectorXd getStateVector(unsigned int sample);
 
  /**
@@ -44,7 +69,7 @@ class TrajectoryServer
    *
    * @param state_vec - vector containing the joint angles
    */
-  sr_robot_msgs::sendupdate generateMessage(Eigen::VectorXd & state_vec);
+  sr_robot_msgs::sendupdate generateMessage(Eigen::VectorXd const & state_vec);
   void initJointNames();
 
   /////////////////
@@ -52,6 +77,8 @@ class TrajectoryServer
   /////////////////
 
   bool replayTrajectory(sr_traj_server::replay_traj::Request &req, sr_traj_server::replay_traj::Response &res);
+  bool grasp(sr_traj_server::Grasp::Request &req, sr_traj_server::Grasp::Response &res);
+  bool resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
   
 }; // end class
 

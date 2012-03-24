@@ -1,0 +1,5 @@
+uint8 traj_inc #Number of trajectory increments the grasp joints will move
+---
+bool success
+
+
