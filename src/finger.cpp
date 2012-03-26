@@ -92,10 +92,9 @@ void Finger::incrementJointStates(unsigned int n_inc)
   state_vec=traj_->getStateVector(sample_); 
 
 
-  for(unsigned int i=0; i<finger_joints_.size();i++){
-    std::cout<<grasp_joints_[i]<<std::endl;
+  for(unsigned int i=0; i<grasp_joints_.size();i++)
     joint_states_[grasp_joints_[i]]=state_vec(grasp_joints_[i]);
-  }
+  
 
   lock_.unlock();
 }
