@@ -16,7 +16,6 @@
 #include "../srv_gen/cpp/include/sr_traj_server/Grasp.h"
 #include <sr_robot_msgs/sendupdate.h>
 #include <string>
-#include <map>
 #include "finger.h"
 #include <boost/shared_ptr.hpp>
 #include <std_srvs/Empty.h>
@@ -49,9 +48,9 @@ class TrajectoryServer
   ros::ServiceServer grasp_srv_;
    ros::ServiceServer reset_hand_srv_;
   ros::Publisher shadowhand_pub_;
-  //std::map<std::string,unsigned int> joint_ordinals_; 
+
   std::vector<Finger*> fingers_;
-  // void initJointOrdinals();
+
  bool traj_loaded_;
  double delta_t_;
  std::vector<unsigned int> contact_fingers_;

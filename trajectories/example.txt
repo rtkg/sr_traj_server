@@ -1,5 +1,5 @@
 #Timestep
-0.020
+0.02
 #Dimensions
 20 201
 #Joint trajectories

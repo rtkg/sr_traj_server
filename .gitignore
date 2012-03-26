@@ -3,6 +3,7 @@
 
 # Backup and data files
 eg/eg.*
+#*
 *~
 *.bak
 *.off

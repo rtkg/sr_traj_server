@@ -5,22 +5,18 @@
  *
  */
 
-
-// #include <string>
-// #include "finger/finger.h"
-
-// #include <vector>
 #include "sr_traj_server/finger.h"
-#include <math.h>
 
 //-------------------------------------------------------------------
 Finger::Finger(std::vector<int> const & finger_joints,std::vector<int> const & grasp_joints, std::string const & sensor_topic, double force_threshold,boost::shared_ptr<TrajectoryParser> const & traj) : 
-  traj_(traj), f_thresh_(force_threshold),finger_joints_(finger_joints),grasp_joints_(grasp_joints), joint_states_(new std::map<int,double>),sample_(0),completed_(false)
+  traj_(traj), f_thresh_(force_threshold),finger_joints_(finger_joints),grasp_joints_(grasp_joints), sample_(0),completed_(false)
 {
 
   sensor_sub_=nh_.subscribe<icr::ContactState>(sensor_topic, 1, &Finger::contactListener, this);
 
+
   sst_=sensor_topic;//REMOVE! only for debugging
+
 }
 //-------------------------------------------------------------------
 void Finger::contactListener(const icr::ContactState::ConstPtr& ct_st)
@@ -31,13 +27,6 @@ void Finger::contactListener(const icr::ContactState::ConstPtr& ct_st)
    else
      touching_=false;
 
-  //DEBUG STUFF
-  if (!strcmp(sst_.c_str(),"/sensor_remapper/mfdistal/contact_state"))
-    {
-      // std::cout<<"touching" <<touching_<<std::endl;
-      // std::cout<<"sample" <<sample_<<std::endl;
-    }
-    //DEBUG STUFF END
   lock_.unlock();
 }
 //-------------------------------------------------------------------
@@ -51,11 +40,13 @@ bool Finger::isTouching()
   return touching;
 }
 //-------------------------------------------------------------------
-boost::shared_ptr<std::map<int,double> > Finger::getJointStates()
+std::map<int,double>  Finger::getJointStates()
 {
-
   lock_.lock();
-  boost::shared_ptr<std::map<int,double> > joint_states(new std::map<int,double>(*joint_states_.get()));
+ 
+  std::map<int,double> joint_states=joint_states_;
+
+
   lock_.unlock();
 
   return joint_states;
@@ -63,25 +54,26 @@ boost::shared_ptr<std::map<int,double> > Finger::getJointStates()
 //------------------------------------------------------------------------------------------------------
 void Finger::incrementJointStates()
 {
+
   lock_.lock();
   Eigen::VectorXd state_vec;
   state_vec.resize(traj_->getNumTraj());
   state_vec=traj_->getStateVector(sample_); 
 
-  if((!touching_) || (sample_==0))
-    {
-    for(unsigned int i=0; i<finger_joints_.size();i++)
-      joint_states_->find(finger_joints_[i])->second=state_vec(finger_joints_[i]);
 
-    sample_++;
-    }
+    if((!touching_) || (sample_==0))
+      {
+	for(unsigned int i=0; i<finger_joints_.size();i++)
+            joint_states_[finger_joints_[i]]=state_vec(finger_joints_[i]);
+
+	sample_++;
+      }
 
   if(traj_->getNumSamples() <= sample_)
     {
       sample_=traj_->getNumSamples()-1;
       completed_=true;
-      }
-
+    }
 
   lock_.unlock();
 }
@@ -97,10 +89,13 @@ void Finger::incrementJointStates(unsigned int n_inc)
   else
     sample_=traj_->getNumSamples()-1;
 
-   state_vec=traj_->getStateVector(sample_); 
+  state_vec=traj_->getStateVector(sample_); 
 
-    for(unsigned int i=0; i<grasp_joints_.size();i++)
-      joint_states_->find(grasp_joints_[i])->second=state_vec(grasp_joints_[i]);
+
+  for(unsigned int i=0; i<finger_joints_.size();i++){
+    std::cout<<grasp_joints_[i]<<std::endl;
+    joint_states_[grasp_joints_[i]]=state_vec(grasp_joints_[i]);
+  }
 
   lock_.unlock();
 }

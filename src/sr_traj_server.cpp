@@ -69,7 +69,6 @@ TrajectoryServer::TrajectoryServer() : nh_private_("~"), traj_loaded_(false), de
 
   initContactFingers();//By default, all fingers have to come into contact in order to establish a grasp
     
-  // initJointOrdinals();
 
   replay_traj_srv_ = nh_.advertiseService("replay_traj",&TrajectoryServer::replayTrajectory,this);
   grasp_srv_ = nh_.advertiseService("grasp",&TrajectoryServer::grasp,this);
@@ -143,8 +142,8 @@ sr_robot_msgs::sendupdate TrajectoryServer::generateMessage(Eigen::VectorXd cons
   for(unsigned int i = 0; i < number_hand_joints_; ++i )
     {
       joint.joint_name = joint_names_[i];
-      joint.joint_target = state_vec.coeff(i);
-      table[i] = joint;
+      joint.joint_target = state_vec(i);
+	table[i] = joint;
     }
 
   msg.sendupdate_list = table;
@@ -211,7 +210,6 @@ void TrajectoryServer::spin()
   struct timeval start, now;
   gettimeofday(&start,0);
 
-
   if(!traj_loaded_)
     ;
   else if(completed())
@@ -227,7 +225,9 @@ void TrajectoryServer::spin()
       for(unsigned int i=0; i < fingers_.size();i++)
   	fingers_[i]->incrementJointStates();
 
+
       followTrajectories();
+
     }
 
   ros::spinOnce();
@@ -244,18 +244,22 @@ void TrajectoryServer::spin()
 void TrajectoryServer::followTrajectories()
 {
   Eigen::VectorXd state_vec(number_hand_joints_);
-  boost::shared_ptr<std::map<int,double> > joint_states;
+  std::map<int,double> joint_states;
   std::map<int,double>::iterator joint_states_it;      
 
   for(unsigned int i=0; i < fingers_.size();i++)
     {
       joint_states=fingers_[i]->getJointStates();
-
-      for ( joint_states_it=joint_states->begin() ; joint_states_it != joint_states->end(); joint_states_it++ )
-	state_vec((*joint_states_it).first)=(*joint_states_it).second;
+           
+      for ( joint_states_it=joint_states.begin() ; joint_states_it != joint_states.end(); joint_states_it++ )
+        	state_vec((*joint_states_it).first)=(*joint_states_it).second;
 
     }
 
+  //EVIL HACK: freeze the wrist joints to zero since their trajectories are not read by any finger
+  state_vec(19)=0;
+  state_vec(18)=0;
+ 
   shadowhand_pub_.publish(generateMessage(state_vec));
 }
 //------------------------------------------------------------------------------------------------------
@@ -288,7 +292,13 @@ bool TrajectoryServer::completed()
 bool TrajectoryServer::grasp(sr_traj_server::Grasp::Request &req, sr_traj_server::Grasp::Response &res)
 {
   res.success=false;
-  
+ 
+  if(!traj_loaded_)
+    {
+      ROS_ERROR("No trajectory loaded - cannot execute grasp");
+      return res.success;
+    }
+
   for(unsigned int i=0; i < contact_fingers_.size();i++)
 	fingers_[contact_fingers_[i]]->incrementJointStates(req.traj_inc);
 
