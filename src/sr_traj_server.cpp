@@ -291,6 +291,7 @@ bool TrajectoryServer::completed()
 //------------------------------------------------------------------------------------------------------
 bool TrajectoryServer::grasp(sr_traj_server::Grasp::Request &req, sr_traj_server::Grasp::Response &res)
 {
+  //DOES NOT WORK
   res.success=false;
  
   if(!traj_loaded_)
@@ -320,7 +321,8 @@ bool TrajectoryServer::resetHand(std_srvs::Empty::Request &req, std_srvs::Empty:
   lock_.unlock();
 
   Eigen::VectorXd state_vec(number_hand_joints_);
-  state_vec.setZero();
+
+  state_vec.setZero(); state_vec(7)=-3; state_vec(16)=-3;
   shadowhand_pub_.publish(generateMessage(state_vec));
   return true;
 }

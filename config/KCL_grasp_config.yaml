@@ -2,25 +2,25 @@ grasp_config:
      - finger_joints: [THJ1,THJ2,THJ3,THJ4,THJ5] #all Joints belonging to a finger
        grasp_joints: [THJ1,THJ2] #Joints that will move after the initial grasp contact was made
        sensor_topic: /sensor_remapper/thdistal/contact_state #the sensor topic which indicates whether a finger tip is in contact or not
-       force_threshold: 0.005 #A sensed force value above the threshold indicates contact
+       force_threshold: 0.5 #A sensed force value above the threshold indicates contact
 
      - finger_joints: [FFJ0,FFJ3,FFJ4]
        grasp_joints: [FFJ0,FFJ3] 
        sensor_topic: /sensor_remapper/ffdistal/contact_state
-       force_threshold: 0.005
+       force_threshold: 0.5
     
      - finger_joints: [MFJ0,MFJ3,MFJ4]
        grasp_joints: [MFJ0,MFJ3] 
        sensor_topic: /sensor_remapper/mfdistal/contact_state
-       force_threshold: 0.005
+       force_threshold: 0.5
     
      - finger_joints: [RFJ0,RFJ3,RFJ4]
        grasp_joints: [RFJ0,RFJ3] 
        sensor_topic: /sensor_remapper/rfdistal/contact_state
-       force_threshold: 0.005
+       force_threshold: 0.5
      
      - finger_joints: [LFJ0,LFJ3,LFJ4,LFJ5]   
        grasp_joints: [LFJ0,LFJ3] 
        sensor_topic: /sensor_remapper/lfdistal/contact_state
-       force_threshold: 0.005
+       force_threshold: 0.5
     

@@ -24,8 +24,8 @@ void Finger::contactListener(const icr::ContactState::ConstPtr& ct_st)
   lock_.lock();
   if(sqrt(pow(ct_st->wrench.force.x,2)+pow(ct_st->wrench.force.y,2)+pow(ct_st->wrench.force.z,2)) > f_thresh_)
     touching_=true;
-   else
-     touching_=false;
+   // else
+   //   touching_=false;
 
   lock_.unlock();
 }
@@ -34,6 +34,7 @@ bool Finger::isTouching()
 {
   bool touching;
   lock_.lock();
+
   touching=touching_;
   lock_.unlock();
 
