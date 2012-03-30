@@ -14,6 +14,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <Eigen/Core>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
  #include <icr/ContactState.h>
@@ -32,7 +33,8 @@ class Finger
   void resetTrajectories();
   bool trajCompleted();
   void incrementJointStates();
-  void incrementJointStates(unsigned int n_inc);
+  bool incrementGraspJointStates(double gf_thresh);
+  Eigen::Vector3d getCForce();
 
  private:
 
@@ -54,6 +56,7 @@ class Finger
 
   ros::Subscriber sensor_sub_;
 
+  Eigen::Vector3d c_force_;
 
   /////////////////
   //  CALLBACKS  //

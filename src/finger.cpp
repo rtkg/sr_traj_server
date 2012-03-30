@@ -22,10 +22,17 @@ Finger::Finger(std::vector<int> const & finger_joints,std::vector<int> const & g
 void Finger::contactListener(const icr::ContactState::ConstPtr& ct_st)
 {
   lock_.lock();
-  if(sqrt(pow(ct_st->wrench.force.x,2)+pow(ct_st->wrench.force.y,2)+pow(ct_st->wrench.force.z,2)) > f_thresh_)
+
+  c_force_(0)=ct_st->wrench.force.x;
+  c_force_(1)=ct_st->wrench.force.y;
+  c_force_(2)=ct_st->wrench.force.z;
+
+  if(c_force_.norm() > f_thresh_)
+    {
     touching_=true;
+    }
    // else
-   //   touching_=false;
+   //  touching_=false;
 
   lock_.unlock();
 }
@@ -34,7 +41,7 @@ bool Finger::isTouching()
 {
   bool touching;
   lock_.lock();
-
+  // std::cout<<sst_<<" is touching"<<std::endl;
   touching=touching_;
   lock_.unlock();
 
@@ -61,11 +68,16 @@ void Finger::incrementJointStates()
   state_vec.resize(traj_->getNumTraj());
   state_vec=traj_->getStateVector(sample_); 
 
+  // if(!strcmp(sst_.c_str(),"/sensor_remapper/ffdistal/contact_state"))
+  //   {
+  //     std::cout<<"sample "<<sample_<<" force "<<c_force_.norm()<<"touching "<<touching_<<std::endl;
+  //    }
 
     if((!touching_) || (sample_==0))
       {
 	for(unsigned int i=0; i<finger_joints_.size();i++)
             joint_states_[finger_joints_[i]]=state_vec(finger_joints_[i]);
+
 
 	sample_++;
       }
@@ -79,25 +91,34 @@ void Finger::incrementJointStates()
   lock_.unlock();
 }
 //------------------------------------------------------------------------------------------------------
-void Finger::incrementJointStates(unsigned int n_inc)
-{
-  lock_.lock();
-  Eigen::VectorXd state_vec;
-  state_vec.resize(traj_->getNumTraj());
+ bool Finger::incrementGraspJointStates(double gf_thresh)
+ {
+   lock_.lock();
 
-  if(traj_->getNumSamples() >= (sample_+n_inc)+1)
-    sample_+=n_inc;
-  else
-    sample_=traj_->getNumSamples()-1;
+   if(c_force_.norm() >= gf_thresh )
+     {
+       lock_.unlock();
+       std::cout<<sst_<<" reached grasp force."<<std::endl;
+       return true;
+     }
 
-  state_vec=traj_->getStateVector(sample_); 
+   Eigen::VectorXd state_vec;
+   state_vec.resize(traj_->getNumTraj());
+   state_vec=traj_->getStateVector(sample_); 
 
+   for(unsigned int i=0; i<grasp_joints_.size();i++)
+     joint_states_[grasp_joints_[i]]=state_vec(grasp_joints_[i]);
 
-  for(unsigned int i=0; i<grasp_joints_.size();i++)
-    joint_states_[grasp_joints_[i]]=state_vec(grasp_joints_[i]);
+   sample_++;
+
+   if(traj_->getNumSamples() <= sample_)
+     {
+       sample_=traj_->getNumSamples()-1;
+       ROS_WARN("Using last sample - end of trajectory reached.");
+     }
   
-
-  lock_.unlock();
+   lock_.unlock();
+   return false;
 }
 //------------------------------------------------------------------------------------------------------
 void Finger::resetTrajectories()
@@ -118,4 +139,12 @@ bool Finger::trajCompleted()
   return completed;
 }
 //------------------------------------------------------------------------------------------------------
+ Eigen::Vector3d Finger::getCForce()
+ {
+  lock_.lock();
+  Eigen::Vector3d c_force=c_force_;
+  lock_.unlock();
 
+  return c_force;
+}
+//------------------------------------------------------------------------------------------------------

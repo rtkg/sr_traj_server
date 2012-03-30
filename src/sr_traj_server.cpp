@@ -15,7 +15,7 @@
 
 const unsigned int TrajectoryServer::number_hand_joints_ = 20;
 //-------------------------------------------------------------------
-TrajectoryServer::TrajectoryServer() : nh_private_("~"), traj_loaded_(false), delta_t_(1e-3)
+TrajectoryServer::TrajectoryServer() : nh_private_("~"), traj_loaded_(false), delta_t_(1e-3),gf_thres_(0.0)
 {
   initJointNames();
 
@@ -68,10 +68,11 @@ TrajectoryServer::TrajectoryServer() : nh_private_("~"), traj_loaded_(false), de
     }
 
   initContactFingers();//By default, all fingers have to come into contact in order to establish a grasp
-    
+  state_vec_.resize(number_hand_joints_);
+  state_vec_.setZero();
 
   replay_traj_srv_ = nh_.advertiseService("replay_traj",&TrajectoryServer::replayTrajectory,this);
-  grasp_srv_ = nh_.advertiseService("grasp",&TrajectoryServer::grasp,this);
+  //grasp_srv_ = nh_.advertiseService("grasp",&TrajectoryServer::grasp,this);
   reset_hand_srv_ = nh_.advertiseService("reset_hand",&TrajectoryServer::resetHand,this);
   shadowhand_pub_ = nh_.advertise<sr_robot_msgs::sendupdate> ("sendupdate", 1); //queue size of only one - maybe change that
 }
@@ -94,31 +95,31 @@ void TrajectoryServer::initJointNames()
 
   joint_names_.resize(number_hand_joints_);
 
-    joint_names_[0] = "THJ1";
-    joint_names_[1] = "THJ2";
-    joint_names_[2] = "THJ3";
-    joint_names_[3] = "THJ4";
-    joint_names_[4] = "THJ5";
-    joint_names_[5] = "FFJ0";
-    joint_names_[6] = "FFJ3";
-    joint_names_[7] = "FFJ4";
-    joint_names_[8] = "MFJ0";
-    joint_names_[9] = "MFJ3";
-    joint_names_[10] = "MFJ4";
-    joint_names_[11] = "RFJ0";
-    joint_names_[12] = "RFJ3";
-    joint_names_[13] = "RFJ4";
-    joint_names_[14] = "LFJ0";
-    joint_names_[15] = "LFJ3";
-    joint_names_[16] = "LFJ4";
-    joint_names_[17] = "LFJ5";
-    joint_names_[18] = "WRJ1";
-    joint_names_[19] = "WRJ2";
+  joint_names_[0] = "THJ1";
+  joint_names_[1] = "THJ2";
+  joint_names_[2] = "THJ3";
+  joint_names_[3] = "THJ4";
+  joint_names_[4] = "THJ5";
+  joint_names_[5] = "FFJ0";
+  joint_names_[6] = "FFJ3";
+  joint_names_[7] = "FFJ4";
+  joint_names_[8] = "MFJ0";
+  joint_names_[9] = "MFJ3";
+  joint_names_[10] = "MFJ4";
+  joint_names_[11] = "RFJ0";
+  joint_names_[12] = "RFJ3";
+  joint_names_[13] = "RFJ4";
+  joint_names_[14] = "LFJ0";
+  joint_names_[15] = "LFJ3";
+  joint_names_[16] = "LFJ4";
+  joint_names_[17] = "LFJ5";
+  joint_names_[18] = "WRJ1";
+  joint_names_[19] = "WRJ2";
 }
 //-------------------------------------------------------------------
 int TrajectoryServer::getJointId(std::string const & joint_name)
 {
- int id=-1;
+  int id=-1;
 
   for(unsigned int i=0; i<number_hand_joints_;i++)
     if(!strcmp(joint_names_[i].c_str(),joint_name.c_str()))
@@ -132,7 +133,7 @@ int TrajectoryServer::getJointId(std::string const & joint_name)
   return id;
 }
 //-------------------------------------------------------------------
-sr_robot_msgs::sendupdate TrajectoryServer::generateMessage(Eigen::VectorXd const & state_vec)
+sr_robot_msgs::sendupdate TrajectoryServer::generateMessage()
 {
   sr_robot_msgs::joint joint;
   sr_robot_msgs::sendupdate msg;
@@ -142,8 +143,8 @@ sr_robot_msgs::sendupdate TrajectoryServer::generateMessage(Eigen::VectorXd cons
   for(unsigned int i = 0; i < number_hand_joints_; ++i )
     {
       joint.joint_name = joint_names_[i];
-      joint.joint_target = state_vec(i);
-	table[i] = joint;
+      joint.joint_target = state_vec_(i);
+      table[i] = joint;
     }
 
   msg.sendupdate_list = table;
@@ -193,6 +194,8 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
 	}
     }
 
+ gf_thres_=req.gf_max;
+
   for(unsigned int i=0;i<fingers_.size();i++)
     fingers_[i]->resetTrajectories();
   
@@ -207,19 +210,23 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
 //------------------------------------------------------------------------------------------------------
 void TrajectoryServer::spin()
 {
-  struct timeval start, now;
+  
+  struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
   gettimeofday(&start,0);
 
   if(!traj_loaded_)
     ;
   else if(completed())
     {
+      lock_.lock();
       traj_loaded_=false;
       ROS_INFO("Trajectory completed");
       delta_t_=1e-3;
+      state_vec_.setZero();
+      lock_.unlock();
     }
-  else if(contactsEstablished())
-    ROS_INFO("Grasp contacts established - ready to grasp");  
+   else if(contactsEstablished())
+     ;//    std::cout<<"gf_thresh"<<gf_thres_<<std::endl;// ROS_INFO("Grasp contacts established - ready to grasp");  
   else
     {
       for(unsigned int i=0; i < fingers_.size();i++)
@@ -227,6 +234,27 @@ void TrajectoryServer::spin()
 
 
       followTrajectories();
+
+    }
+
+  if(gf_thres_>0.0 && contactsEstablished())
+    {
+      ROS_INFO("Grasping...");  
+      lock_.lock();
+      graspTrajectories();
+      for(unsigned int i=0; i < contact_fingers_.size();i++)
+	if(fingers_[contact_fingers_[i]]->incrementGraspJointStates(gf_thres_))
+	  {
+	    ROS_INFO("Grasp completed");
+	    gf_thres_=0.0;
+	    traj_loaded_=false;
+	    delta_t_=1e-3;
+            state_vec_.setZero();
+	    break;
+	  }
+
+ 
+      lock_.unlock();
 
     }
 
@@ -243,7 +271,6 @@ void TrajectoryServer::spin()
 //------------------------------------------------------------------------------------------------------
 void TrajectoryServer::followTrajectories()
 {
-  Eigen::VectorXd state_vec(number_hand_joints_);
   std::map<int,double> joint_states;
   std::map<int,double>::iterator joint_states_it;      
 
@@ -252,20 +279,35 @@ void TrajectoryServer::followTrajectories()
       joint_states=fingers_[i]->getJointStates();
            
       for ( joint_states_it=joint_states.begin() ; joint_states_it != joint_states.end(); joint_states_it++ )
-        	state_vec((*joint_states_it).first)=(*joint_states_it).second;
+	state_vec_((*joint_states_it).first)=(*joint_states_it).second;
+
+    }
+ 
+  shadowhand_pub_.publish(generateMessage());
+}
+//------------------------------------------------------------------------------------------------------
+void TrajectoryServer::graspTrajectories()
+{
+  
+  std::map<int,double> joint_states;
+  std::map<int,double>::iterator joint_states_it;      
+
+  for(unsigned int i=0; i < contact_fingers_.size();i++)
+    {
+      joint_states=fingers_[contact_fingers_[i]]->getJointStates();
+           
+      for ( joint_states_it=joint_states.begin() ; joint_states_it != joint_states.end(); joint_states_it++ )
+	state_vec_((*joint_states_it).first)=(*joint_states_it).second;
 
     }
 
-  //EVIL HACK: freeze the wrist joints to zero since their trajectories are not read by any finger
-  state_vec(19)=0;
-  state_vec(18)=0;
- 
-  shadowhand_pub_.publish(generateMessage(state_vec));
+  shadowhand_pub_.publish(generateMessage());
 }
 //------------------------------------------------------------------------------------------------------
 bool TrajectoryServer::contactsEstablished()
 {
   bool all_touching = true;
+
   for(unsigned int i=0; i < contact_fingers_.size();i++)
     if(!fingers_[contact_fingers_[i]]->isTouching())
       {
@@ -289,26 +331,25 @@ bool TrajectoryServer::completed()
   return completed;
 }
 //------------------------------------------------------------------------------------------------------
-bool TrajectoryServer::grasp(sr_traj_server::Grasp::Request &req, sr_traj_server::Grasp::Response &res)
-{
-  //DOES NOT WORK
-  res.success=false;
+// bool TrajectoryServer::grasp(sr_traj_server::Grasp::Request &req, sr_traj_server::Grasp::Response &res)
+// {
+//   //DOES NOT WORK
+//   res.success=false;
  
-  if(!traj_loaded_)
-    {
-      ROS_ERROR("No trajectory loaded - cannot execute grasp");
-      return res.success;
-    }
+//   lock_.lock();
 
-  for(unsigned int i=0; i < contact_fingers_.size();i++)
-	fingers_[contact_fingers_[i]]->incrementJointStates(req.traj_inc);
-
-  followTrajectories();
-
-  res.success=true;
+//   if(!traj_loaded_)
+//     {
+//       ROS_ERROR("No trajectory loaded - cannot execute grasp");
+//       return res.success;
+//     }
+//   std::cout<<"setting g_force"<<std::endl;
+//   gf_thres_=req.g_force; 
+//   lock_.unlock();
+//   res.success=true;
  
-  return res.success;
-}
+//   return res.success;
+// }
 //------------------------------------------------------------------------------------------------------
 bool TrajectoryServer::resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 {
@@ -318,12 +359,11 @@ bool TrajectoryServer::resetHand(std_srvs::Empty::Request &req, std_srvs::Empty:
   for(unsigned int i=0;i<fingers_.size();i++)
     fingers_[i]->resetTrajectories();
 
+  gf_thres_=0.0;
+  state_vec_.setZero();
   lock_.unlock();
 
-  Eigen::VectorXd state_vec(number_hand_joints_);
-
-  state_vec.setZero(); state_vec(7)=-3; state_vec(16)=-3;
-  shadowhand_pub_.publish(generateMessage(state_vec));
+  shadowhand_pub_.publish(generateMessage());
   return true;
 }
 //------------------------------------------------------------------------------------------------------

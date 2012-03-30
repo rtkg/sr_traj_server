@@ -1,5 +1,6 @@
 string file
 string[] contact_fingers #valid entries: TH,FF,MF,RF,LF - indicates which fingers have to be in contact in order to establish the grasp
+float64 gf_max #maximum value for the grasp contact force of any finger
 ---
 bool success
 
