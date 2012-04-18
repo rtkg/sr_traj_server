@@ -17,7 +17,7 @@
 #include <Eigen/Core>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
- #include <icr/ContactState.h>
+ #include <kcl_msgs/KCL_ContactStateStamped.h>
 
 class Finger
 {
@@ -40,7 +40,6 @@ class Finger
 
   ros::NodeHandle nh_; 
 
- std::string sst_; //REMOVE
  
   boost::mutex lock_;
   boost::shared_ptr<TrajectoryParser> traj_;
@@ -56,13 +55,16 @@ class Finger
 
   ros::Subscriber sensor_sub_;
 
+  /**
+   *@brief Right now, only holds the normal_force part
+   */
   Eigen::Vector3d c_force_;
 
   /////////////////
   //  CALLBACKS  //
   /////////////////
 
-  void contactListener(const icr::ContactState::ConstPtr& ct_st);
+  void contactListener(const kcl_msgs::KCL_ContactStateStamped::ConstPtr& ct_st);
    
 }; // end class
 

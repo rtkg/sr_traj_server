@@ -12,27 +12,26 @@ Finger::Finger(std::vector<int> const & finger_joints,std::vector<int> const & g
   traj_(traj), f_thresh_(force_threshold),finger_joints_(finger_joints),grasp_joints_(grasp_joints), sample_(0),completed_(false)
 {
 
-  sensor_sub_=nh_.subscribe<icr::ContactState>(sensor_topic, 1, &Finger::contactListener, this);
+  sensor_sub_=nh_.subscribe<kcl_msgs::KCL_ContactStateStamped>(sensor_topic, 1, &Finger::contactListener, this);
 
-
-  sst_=sensor_topic;//REMOVE! only for debugging
 
 }
 //-------------------------------------------------------------------
-void Finger::contactListener(const icr::ContactState::ConstPtr& ct_st)
+void Finger::contactListener(const kcl_msgs::KCL_ContactStateStamped::ConstPtr& ct_st)
 {
   lock_.lock();
 
-  c_force_(0)=ct_st->wrench.force.x;
-  c_force_(1)=ct_st->wrench.force.y;
-  c_force_(2)=ct_st->wrench.force.z;
+  c_force_(0)=ct_st->contact_normal.x*ct_st->Fnormal+ct_st->tangential_force.x;
+  c_force_(1)=ct_st->contact_normal.y*ct_st->Fnormal+ct_st->tangential_force.y;
+  c_force_(2)=ct_st->contact_normal.z*ct_st->Fnormal+ct_st->tangential_force.z;
+
 
   if(c_force_.norm() > f_thresh_)
     {
-    touching_=true;
+      touching_=true;
     }
-   // else
-   //  touching_=false;
+  // else
+  //  touching_=false;
 
   lock_.unlock();
 }
@@ -98,7 +97,7 @@ void Finger::incrementJointStates()
    if(c_force_.norm() >= gf_thresh )
      {
        lock_.unlock();
-       std::cout<<sst_<<" reached grasp force."<<std::endl;
+       // std::cout<<sst_<<" reached grasp force."<<std::endl;
        return true;
      }
 

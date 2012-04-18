@@ -1,34 +1,44 @@
-Trajectory server for the Shadow Hand. Valid hand state trajectories have to be of 
-size 20xN, where N describes the number of samples. See the example in the 
-/trajectories folder. The joint ordering has to be:
+Trajectory server for the Shadow Hand. Valid hand state trajectories have to be of size 20xN, where
+N describes the number of samples. See the example in the /trajectories folder. The joint ordering
+has to be:
 
 THJ1
-THJ2
-THJ3
-THJ4
-THJ5
-FFJ0
-FFJ3
-FFJ4
-MFJ0
-MFJ3
-MFJ4
-RFJ0
-RFJ3
-RFJ4
-LFJ0
-LFJ3
-LFJ4
-LFJ5
-WRJ1
-WRJ2 
+THJ2 
+THJ3 
+THJ4 
+THJ5 
+FFJ0 
+FFJ3 
+FFJ4 
+MFJ0 
+MFJ3 
+MFJ4 
+RFJ0 
+RFJ3 
+RFJ4 
+LFJ0 
+LFJ3 
+LFJ4 
+LFJ5 
+WRJ1 
+WRJ2
 
 
-The server node publishes on /srh/sendupdate. The default trajectories folder can be
-specified in the sr_traj_server.launch file. Run the server via 
-'roslaunch sr_traj_server sr_traj_server.launch'. A service 
-/sr_trajectory_server/replay_traj is provided which expects a string with the local 
-filename, e.g., 'rosservice call /sr_trajectory_server/replay_traj "example.txt" '.
-Aforementioned launch file starts the Shadow Hand interface and the trajectory server.
-To visualize use Rviz: 'rosrun rviz rviz' and load the configuration file in the 
-/rviz_config folder.
+The server node publishes on /srh/sendupdate. The default trajectories folder can be specified in
+the sr_traj_server.launch file. Run the server via 'roslaunch sr_traj_server
+sr_traj_server.launch'. This version of the trajectory server also executes a very simple reactive
+force controller - a user can specify contact fingers (valid values are "TH", "FF", "MF", "RF",
+"LF"). When a contact finger touches during execution of a trajectory it stops. Once all contact
+fingers touch the object, the trajectories of the joints corresponding to the contact fingers
+(specified in config/KCL_grasp_config.yaml) are continued until the force value corresponding to any
+one contact finger exceeds a given threshold. If no contact is made, the trajectories are simply replayed until the end.
+
+ A service /sr_trajectory_server/replay_traj is provided which expects a string with the local
+filename, e.g: rosservice call /sr_traj_server/replay_traj '{file: prismatic_small.txt,
+contact_fingers: ["TH","FF","MF"], gf_max: 2}'
+
+Here, prismatic_small.txt is the name of a trajectory in the trajectories folder, contact_fingers
+indicates which finger tips are used in the reactive force control and gf_max indicates the force
+threshold, i.e., if any force sensor value exceeds gf_max the grasp is seen to be successful.
+
+The hand can be moved back to 0 joint values via rosservice call /sr_traj_server/reset_hand
