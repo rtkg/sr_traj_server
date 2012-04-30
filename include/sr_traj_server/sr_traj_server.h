@@ -14,6 +14,7 @@
 #include <boost/thread/mutex.hpp>
 #include "../srv_gen/cpp/include/sr_traj_server/replay_traj.h"
 #include <sr_robot_msgs/sendupdate.h>
+#include <std_srvs/Empty.h>
 
 class TrajectoryServer
 {
@@ -27,9 +28,10 @@ class TrajectoryServer
   ros::NodeHandle nh_, nh_private_;
   static const unsigned int number_hand_joints_;
   TrajectoryParser* trajectory_parser_;
-  boost::mutex data_mutex_;
+  boost::mutex lock_;
   std::vector<std::string> joint_names_; 
   ros::ServiceServer replay_traj_srv_;
+  ros::ServiceServer reset_hand_srv_;
   ros::Publisher shadowhand_pub_;
 
   /**
@@ -52,7 +54,7 @@ class TrajectoryServer
   /////////////////
 
   bool replayTrajectory(sr_traj_server::replay_traj::Request &req, sr_traj_server::replay_traj::Response &res);
-  
+   bool resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 }; // end class
 
 

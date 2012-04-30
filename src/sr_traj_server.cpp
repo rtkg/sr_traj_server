@@ -28,13 +28,10 @@ TrajectoryServer::TrajectoryServer() : nh_private_("~")
     nh_private_.searchParam("sendupdate_prefix", param);
     nh_private_.param(param, sendupdate_prefix, std::string());
 
-    std::string server_prefix;
-    nh_private_.searchParam("server_prefix", param);
-    nh_private_.param(param, server_prefix, std::string());
- 
     initJointNames();
 
-    replay_traj_srv_ = nh_.advertiseService(server_prefix + "replay_traj",&TrajectoryServer::replayTrajectory,this);
+    reset_hand_srv_ = nh_.advertiseService("reset_hand",&TrajectoryServer::resetHand,this);
+    replay_traj_srv_ = nh_.advertiseService("replay_traj",&TrajectoryServer::replayTrajectory,this);
     shadowhand_pub_ = nh_.advertise<sr_robot_msgs::sendupdate> (sendupdate_prefix + "sendupdate", 1); //queue size of only one - maybe change that
 }
 //-------------------------------------------------------------------
@@ -89,21 +86,21 @@ sr_robot_msgs::sendupdate TrajectoryServer::generateMessage(Eigen::VectorXd & st
 //-------------------------------------------------------------------
 bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &req, sr_traj_server::replay_traj::Response &res)
 {
-  data_mutex_.lock();
+  
   res.success=false;
- 
+ lock_.lock();
   //Load the trajectory in the parser
   if(!trajectory_parser_->parseFile(req.file))
     {
       ROS_ERROR("Could not parse file %s",(trajectory_parser_->getTrajDir()+req.file).c_str());
-      data_mutex_.unlock();
+      lock_.unlock();
       return res.success;
     }
 
   if(!trajectory_parser_->getNumTraj()==number_hand_joints_)
     {
       ROS_ERROR("%d number of joint trajectories need to be specified",number_hand_joints_);
-      data_mutex_.unlock();
+      lock_.unlock();
       return res.success;
     }
   
@@ -112,9 +109,10 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
   unsigned int num_samples=trajectory_parser_->getNumSamples();
 
   struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
-  gettimeofday(&start,0);
   while (ros::ok() && (sample_id < num_samples))
     {
+      gettimeofday(&start,0);
+
       state_vec=getStateVector(sample_id);
       shadowhand_pub_.publish(generateMessage(state_vec));
       sample_id+=1;
@@ -125,12 +123,10 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
 	  if((now.tv_sec - start.tv_sec + 0.000001 * (now.tv_usec - start.tv_usec)) >= trajectory_parser_->getTimestep())
 	    break;
 	}
-
-      //std::cout<<r.cycleTime()<<std::endl;
     }
 
   res.success=true;
-  data_mutex_.unlock();
+  lock_.unlock();
   return res.success;
 }
 //-------------------------------------------------------------------
@@ -139,6 +135,16 @@ Eigen::VectorXd TrajectoryServer::getStateVector(unsigned int sample)
   return trajectory_parser_->getTrajectories()->block<number_hand_joints_,1>(0,sample);
 }
 //-------------------------------------------------------------------
+bool TrajectoryServer::resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
+{
+  lock_.lock();
+ 
 
+  lock_.unlock();
+
+  // shadowhand_pub_.publish(generateMessage());
+  return true;
+}
+//------------------------------------------------------------------------------------------------------
 
 
