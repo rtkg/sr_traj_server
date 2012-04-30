@@ -4,7 +4,7 @@
      sr_traj_server
 
   </description>
-  <author>rkg</author>
+  <author>Robert Krug</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/sr_traj_server</url>
