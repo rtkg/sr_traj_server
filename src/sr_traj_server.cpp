@@ -9,6 +9,8 @@
 #include <string>
 #include "sr_traj_server/sr_traj_server.h"
 #include <sr_robot_msgs/joint.h>
+#include <sys/time.h>
+#include <time.h>
 
 const unsigned int TrajectoryServer::number_hand_joints_ = 20;
 //-------------------------------------------------------------------
@@ -107,18 +109,25 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
   
   Eigen::VectorXd state_vec(number_hand_joints_);
   unsigned int sample_id=0;
-  ros::Rate r(1/trajectory_parser_->getTimestep()); 
-
   unsigned int num_samples=trajectory_parser_->getNumSamples();
 
+  struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
+  gettimeofday(&start,0);
   while (ros::ok() && (sample_id < num_samples))
-  {
-    state_vec=getStateVector(sample_id);
-    shadowhand_pub_.publish(generateMessage(state_vec));
-    sample_id+=1;
-    r.sleep();
-    //std::cout<<r.cycleTime()<<std::endl;
-  }
+    {
+      state_vec=getStateVector(sample_id);
+      shadowhand_pub_.publish(generateMessage(state_vec));
+      sample_id+=1;
+
+      while(1)
+	{
+	  gettimeofday(&now,0);
+	  if((now.tv_sec - start.tv_sec + 0.000001 * (now.tv_usec - start.tv_usec)) >= trajectory_parser_->getTimestep())
+	    break;
+	}
+
+      //std::cout<<r.cycleTime()<<std::endl;
+    }
 
   res.success=true;
   data_mutex_.unlock();
