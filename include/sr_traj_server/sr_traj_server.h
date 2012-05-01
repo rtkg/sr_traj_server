@@ -13,8 +13,10 @@
 #include <Eigen/Core>
 #include <boost/thread/mutex.hpp>
 #include "../srv_gen/cpp/include/sr_traj_server/replay_traj.h"
-#include <sr_robot_msgs/sendupdate.h>
+#include <std_msgs/Float64.h>
 #include <std_srvs/Empty.h>
+
+#define RAD 57.2957795
 
 class TrajectoryServer
 {
@@ -33,6 +35,7 @@ class TrajectoryServer
   ros::ServiceServer replay_traj_srv_;
   ros::ServiceServer reset_hand_srv_;
   ros::Publisher shadowhand_pub_;
+  ros::V_Publisher output_pubs_;
 
   /**
    * Returns a vector containing the joint angles of the hand at the given instance
@@ -46,7 +49,8 @@ class TrajectoryServer
    *
    * @param state_vec - vector containing the joint angles
    */
-  sr_robot_msgs::sendupdate generateMessage(Eigen::VectorXd & state_vec);
+ 
+ // void generateMessages(Eigen::VectorXd const & state_vec, std::vector<std_msgs::Float64> & joint_angles);
   void initJointNames();
 
   /////////////////

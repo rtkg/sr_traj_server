@@ -25,6 +25,8 @@ bin/
 srv_gen/
 src/sr_traj_server/
 
+*#
+*.#
 *.a
 *.dll
 *.lib

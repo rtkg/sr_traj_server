@@ -2,8 +2,8 @@
 
   <!-- Shadow Hand trajectory server -->
   <node pkg="sr_traj_server" name="sr_traj_server" type="sr_traj_server" output="screen" ns="sr_traj_server" >
-    <param name="sendupdate_prefix" type="string" value="/srh/" />
     <param name="trajectory_dir" type="string" value="$(find sr_traj_server)/trajectories/" />
+    <rosparam file="$(find sr_traj_server)/config/output_topics_config.yaml" command="load"/>
   </node>
 </launch>
 
