@@ -127,6 +127,7 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
       gettimeofday(&start,0);
 
       state_vec=getStateVector(sample_id);
+
       std_msgs::Float64 joint_angle;
       for(unsigned int i=0;i<output_pubs_.size();i++)
 	{
@@ -158,26 +159,26 @@ Eigen::VectorXd TrajectoryServer::getStateVector(unsigned int sample)
 bool TrajectoryServer::resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 {
   std::vector<std_msgs::Float64> init_pos(number_hand_joints_);
-  init_pos[0].data=2/RAD;
-  init_pos[1].data=2/RAD;
-  init_pos[2].data=2/RAD;
-  init_pos[3].data=2/RAD;
-  init_pos[4].data=2/RAD;
-  init_pos[5].data=2/RAD;
-  init_pos[6].data=2/RAD;
+  init_pos[0].data=1/RAD;
+  init_pos[1].data=1/RAD;
+  init_pos[2].data=1/RAD;
+  init_pos[3].data=1/RAD;
+  init_pos[4].data=1/RAD;
+  init_pos[5].data=1/RAD;
+  init_pos[6].data=1/RAD;
   init_pos[7].data=-5/RAD;
-  init_pos[8].data=2/RAD;
-  init_pos[9].data=2/RAD;
-  init_pos[10].data=-3/RAD;
-  init_pos[11].data=2/RAD;
-  init_pos[12].data=2/RAD;
-  init_pos[13].data=-3/RAD;
-  init_pos[14].data=2/RAD;
-  init_pos[15].data=2/RAD;
-  init_pos[16].data=-5/RAD;
-  init_pos[17].data=2/RAD;
-  init_pos[18].data=2/RAD;
-  init_pos[19].data=2/RAD;
+  init_pos[8].data=1/RAD;
+  init_pos[9].data=1/RAD;
+  init_pos[10].data=-1/RAD;
+  init_pos[11].data=1/RAD;
+  init_pos[12].data=1/RAD;
+  init_pos[13].data=-1/RAD;
+  init_pos[14].data=1/RAD;
+  init_pos[15].data=1/RAD;
+  init_pos[16].data=-1/RAD;
+  init_pos[17].data=1/RAD;
+  init_pos[18].data=1/RAD;
+  init_pos[19].data=1/RAD;
 
   lock_.lock();
  
