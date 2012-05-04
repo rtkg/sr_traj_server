@@ -3,7 +3,7 @@
   <!-- Shadow Hand trajectory server -->
   <node pkg="sr_traj_server" name="sr_traj_server" type="sr_traj_server" output="screen" ns="sr_traj_server" >
     <param name="trajectory_dir" type="string" value="$(find sr_traj_server)/trajectories/" />
-    <rosparam file="$(find sr_traj_server)/config/impedance_control_topics_config.yaml" command="load"/>
+    <rosparam file="$(find sr_traj_server)/config/position_control_topics_config.yaml" command="load"/>
   </node>
 </launch>
 

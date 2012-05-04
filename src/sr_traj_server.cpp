@@ -121,6 +121,11 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
   unsigned int sample_id=0;
   unsigned int num_samples=trajectory_parser_->getNumSamples();
 
+  if((req.n_samples == 0) || (req.n_samples > num_samples))
+    ROS_WARN("Invalid sample number specified. Using %d samples.",num_samples);
+  else
+    num_samples=req.n_samples;
+
   struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
   while (ros::ok() && (sample_id < num_samples))
     {
@@ -135,7 +140,7 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
 	  output_pubs_[i].publish(joint_angle);
 	}
       sample_id+=1;
-
+ 
       while(1)
 	{
 	  gettimeofday(&now,0);
