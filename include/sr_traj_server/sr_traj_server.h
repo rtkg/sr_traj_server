@@ -12,7 +12,8 @@
 #include "trajectory_parser.h"
 #include <Eigen/Core>
 #include <boost/thread/mutex.hpp>
-#include "../srv_gen/cpp/include/sr_traj_server/replay_traj.h"
+#include "sr_traj_server/LoadTrajectory.h"
+#include "sr_traj_server/StepTrajectory.h"
 #include <std_msgs/Float64.h>
 #include <std_srvs/Empty.h>
 
@@ -31,12 +32,17 @@ class TrajectoryServer
   static const unsigned int number_hand_joints_;
   TrajectoryParser* trajectory_parser_;
   boost::mutex lock_;
+  bool traj_loaded_;
+  unsigned int sample_id_;
   std::vector<std::string> joint_names_; 
   ros::ServiceServer replay_traj_srv_;
   ros::ServiceServer reset_hand_srv_;
-  ros::Publisher shadowhand_pub_;
+  ros::ServiceServer load_traj_srv_;
+  ros::ServiceServer step_traj_srv_;
+  ros::ServiceServer move_start_srv_;
+  // ros::Publisher shadowhand_pub_;
   ros::V_Publisher output_pubs_;
-
+  
   /**
    * Returns a vector containing the joint angles of the hand at the given instance
    *
@@ -57,8 +63,11 @@ class TrajectoryServer
   //  CALLBACKS  //
   /////////////////
 
-  bool replayTrajectory(sr_traj_server::replay_traj::Request &req, sr_traj_server::replay_traj::Response &res);
+   bool loadTrajectory(sr_traj_server::LoadTrajectory::Request &req, sr_traj_server::LoadTrajectory::Response &res);
+   bool stepTrajectory(sr_traj_server::StepTrajectory::Request &req, sr_traj_server::StepTrajectory::Response &res);
    bool resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+   bool moveStart(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+   bool replayTrajectory(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 }; // end class
 
 

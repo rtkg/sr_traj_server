@@ -13,7 +13,7 @@
 
 const unsigned int TrajectoryServer::number_hand_joints_ = 20;
 //-------------------------------------------------------------------
-TrajectoryServer::TrajectoryServer() : nh_private_("~")
+TrajectoryServer::TrajectoryServer() : nh_private_("~"),traj_loaded_(false),sample_id_(0)
 {
     std::string searched_param;
     std::string traj_dir;
@@ -43,9 +43,12 @@ TrajectoryServer::TrajectoryServer() : nh_private_("~")
 
     initJointNames();
 
-    reset_hand_srv_ = nh_.advertiseService("reset_hand",&TrajectoryServer::resetHand,this);
-    replay_traj_srv_ = nh_.advertiseService("replay_traj",&TrajectoryServer::replayTrajectory,this);
-    //  shadowhand_pub_ = nh_.advertise<sr_robot_msgs::sendupdate> (sendupdate_prefix + "sendupdate", 1); //queue size of only one - maybe change that
+
+    load_traj_srv_ = nh_.advertiseService("load_trajectory",&TrajectoryServer::loadTrajectory,this);
+    step_traj_srv_ = nh_.advertiseService("step_trajectory",&TrajectoryServer::stepTrajectory,this);
+    replay_traj_srv_ = nh_.advertiseService("replay_trajectory",&TrajectoryServer::replayTrajectory,this);
+    reset_hand_srv_ = nh_.advertiseService("reset_hand",&TrajectoryServer::resetHand,this);   
+    move_start_srv_ = nh_.advertiseService("move_start",&TrajectoryServer::moveStart,this);   
 }
 //-------------------------------------------------------------------
 TrajectoryServer::~TrajectoryServer(){delete trajectory_parser_;}
@@ -77,31 +80,11 @@ void TrajectoryServer::initJointNames()
     joint_names_[19] = "WRJ2";
 }
 //-------------------------------------------------------------------
-// void TrajectoryServer::generateMessage(Eigen::VectorXd const & state_vec)
-// {
-//   sr_robot_msgs::joint joint;
-//   sr_robot_msgs::sendupdate msg;
-   
-//   //Generate sendupdate message
-//   std::vector<sr_robot_msgs::joint> table(number_hand_joints_);
-//   for(unsigned int i = 0; i < number_hand_joints_; ++i )
-//     {
-//       joint.joint_name = joint_names_[i];
-//       joint.joint_target = state_vec.coeff(i);
-//       table[i] = joint;
-//     }
-
-//   msg.sendupdate_list = table;
-//   msg.sendupdate_length = number_hand_joints_;
-
-//   return msg;
-// }
-//-------------------------------------------------------------------
-bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &req, sr_traj_server::replay_traj::Response &res)
+bool TrajectoryServer::loadTrajectory(sr_traj_server::LoadTrajectory::Request &req, sr_traj_server::LoadTrajectory::Response &res)
 {
-  
   res.success=false;
   lock_.lock();
+  
   //Load the trajectory in the parser
   if(!trajectory_parser_->parseFile(req.file))
     {
@@ -116,44 +99,59 @@ bool TrajectoryServer::replayTrajectory(sr_traj_server::replay_traj::Request &re
       lock_.unlock();
       return res.success;
     }
-  
-  Eigen::VectorXd state_vec(number_hand_joints_);
-  unsigned int sample_id=0;
-  unsigned int num_samples=trajectory_parser_->getNumSamples();
 
-  if((req.n_samples == 0) || (req.n_samples > num_samples))
-    ROS_WARN("Invalid sample number specified. Using %d samples.",num_samples);
-  else
-    num_samples=req.n_samples;
-
-  struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
-  while (ros::ok() && (sample_id < num_samples))
-    {
-      gettimeofday(&start,0);
-
-      state_vec=getStateVector(sample_id);
-
-      std_msgs::Float64 joint_angle;
-      for(unsigned int i=0;i<output_pubs_.size();i++)
-	{
-	  joint_angle.data=state_vec(i)/RAD;
-	  output_pubs_[i].publish(joint_angle);
-	}
-      sample_id+=1;
- 
-      while(1)
-	{
-	  gettimeofday(&now,0);
-	  if((now.tv_sec - start.tv_sec + 0.000001 * (now.tv_usec - start.tv_usec)) >= trajectory_parser_->getTimestep())
-	    break;
-	}
-    }
-
-  ROS_INFO("Finished Primitive");
-
-  res.success=true;
+  traj_loaded_=true;
+  sample_id_=0;
   lock_.unlock();
+  ROS_INFO("Trajectory %s loaded",(trajectory_parser_->getTrajDir()+req.file).c_str());
+  res.success=true;
   return res.success;
+}
+//-------------------------------------------------------------------
+bool TrajectoryServer::stepTrajectory(sr_traj_server::StepTrajectory::Request &req, sr_traj_server::StepTrajectory::Response &res)
+  {
+    return true;
+  }
+//-------------------------------------------------------------------
+bool TrajectoryServer::replayTrajectory(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
+{
+  
+
+  
+  // Eigen::VectorXd state_vec(number_hand_joints_);
+  // unsigned int sample_id=0;
+  // unsigned int num_samples=trajectory_parser_->getNumSamples();
+
+  // if((req.n_samples == 0) || (req.n_samples > num_samples))
+  //   ROS_WARN("Invalid sample number specified. Using %d samples.",num_samples);
+  // else
+  //   num_samples=req.n_samples;
+
+  // struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
+  // while (ros::ok() && (sample_id < num_samples))
+  //   {
+  //     gettimeofday(&start,0);
+
+  //     state_vec=getStateVector(sample_id);
+
+  //     std_msgs::Float64 joint_angle;
+  //     for(unsigned int i=0;i<output_pubs_.size();i++)
+  // 	{
+  // 	  joint_angle.data=state_vec(i)/RAD;
+  // 	  output_pubs_[i].publish(joint_angle);
+  // 	}
+  //     sample_id+=1;
+ 
+  //     while(1)
+  // 	{
+  // 	  gettimeofday(&now,0);
+  // 	  if((now.tv_sec - start.tv_sec + 0.000001 * (now.tv_usec - start.tv_usec)) >= trajectory_parser_->getTimestep())
+  // 	    break;
+  // 	}
+  //   }
+  return true;
+
+
 }
 //-------------------------------------------------------------------
 Eigen::VectorXd TrajectoryServer::getStateVector(unsigned int sample)
@@ -193,8 +191,29 @@ bool TrajectoryServer::resetHand(std_srvs::Empty::Request &req, std_srvs::Empty:
   lock_.unlock();
 
   ROS_INFO("Hand reseted");
+  return true;
+}
+//------------------------------------------------------------------------------------------------------
+bool TrajectoryServer::moveStart(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
+{
+  lock_.lock();
+  if(!traj_loaded_)
+    {
+      ROS_ERROR("No trajectory loaded - cannot move to start pose");
+      lock_.unlock();
+      return false;
+    }
 
-  // shadowhand_pub_.publish(generateMessage());
+  Eigen::VectorXd start=getStateVector(0);
+  std_msgs::Float64 joint_angle;
+  for(unsigned int i=0;i<output_pubs_.size();i++)
+    {
+      joint_angle.data=start(i);
+      output_pubs_[i].publish(joint_angle);
+    }
+  lock_.unlock();
+
+  ROS_INFO("Moved to start pose");
   return true;
 }
 //------------------------------------------------------------------------------------------------------
