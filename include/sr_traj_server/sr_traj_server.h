@@ -14,6 +14,7 @@
 #include <boost/thread/mutex.hpp>
 #include "sr_traj_server/LoadTrajectory.h"
 #include "sr_traj_server/StepTrajectory.h"
+#include "sr_traj_server/SetTimestep.h"
 #include <std_msgs/Float64.h>
 #include <std_srvs/Empty.h>
 
@@ -34,15 +35,20 @@ class TrajectoryServer
   boost::mutex lock_;
   bool traj_loaded_;
   unsigned int sample_id_;
+  double timestep_;
   std::vector<std::string> joint_names_; 
   ros::ServiceServer replay_traj_srv_;
-  ros::ServiceServer reset_hand_srv_;
   ros::ServiceServer load_traj_srv_;
   ros::ServiceServer step_traj_srv_;
   ros::ServiceServer move_start_srv_;
-  // ros::Publisher shadowhand_pub_;
-  ros::V_Publisher output_pubs_;
-  
+  ros::ServiceServer set_timestep_srv_;
+#ifdef SENDUPDATE
+   ros::Publisher sendupdate_pub_;
+#else
+   ros::V_Publisher output_pubs_;
+#endif
+
+   
   /**
    * Returns a vector containing the joint angles of the hand at the given instance
    *
@@ -56,8 +62,13 @@ class TrajectoryServer
    * @param state_vec - vector containing the joint angles
    */
  
- // void generateMessages(Eigen::VectorXd const & state_vec, std::vector<std_msgs::Float64> & joint_angles);
-  void initJointNames();
+   void initJointNames();
+
+#ifdef SENDUPDATE
+  void publishSendupdate();
+#else
+    void publish();
+#endif
 
   /////////////////
   //  CALLBACKS  //
@@ -65,7 +76,7 @@ class TrajectoryServer
 
    bool loadTrajectory(sr_traj_server::LoadTrajectory::Request &req, sr_traj_server::LoadTrajectory::Response &res);
    bool stepTrajectory(sr_traj_server::StepTrajectory::Request &req, sr_traj_server::StepTrajectory::Response &res);
-   bool resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+   bool setTimestep(sr_traj_server::SetTimestep::Request &req, sr_traj_server::SetTimestep::Response &res);
    bool moveStart(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
    bool replayTrajectory(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 }; // end class

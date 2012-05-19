@@ -11,23 +11,33 @@
 #include <sys/time.h>
 #include <time.h>
 
+#ifdef SENDUPDATE
+#include "sr_robot_msgs/sendupdate.h"
+#include "sr_robot_msgs/joint.h"
+#endif
+
 const unsigned int TrajectoryServer::number_hand_joints_ = 20;
 //-------------------------------------------------------------------
-TrajectoryServer::TrajectoryServer() : nh_private_("~"),traj_loaded_(false),sample_id_(0)
+TrajectoryServer::TrajectoryServer() : nh_private_("~"),traj_loaded_(false),sample_id_(0),timestep_(0.0)
 {
     std::string searched_param;
     std::string traj_dir;
     nh_private_.searchParam("trajectory_dir", searched_param);
     nh_private_.param(searched_param, traj_dir, std::string());
-    trajectory_parser_ = new TrajectoryParser(traj_dir); //can create a stack smash
+    trajectory_parser_ = new TrajectoryParser(traj_dir); 
     
     ROS_INFO("Trajectory directory set to: %s", traj_dir.c_str());
 
+#ifdef SENDUPDATE
+    sendupdate_pub_=nh_.advertise<sr_robot_msgs::sendupdate>("sendupdate",1);
+    ROS_INFO("Trajectories will be published on the sendupdate topic");
+#else 
   XmlRpc::XmlRpcValue output_topics;
   if (nh_private_.searchParam("output_topics", searched_param))
     {
       nh_.getParam(searched_param,output_topics);
       ROS_ASSERT(output_topics.getType() == XmlRpc::XmlRpcValue::TypeArray); 
+      ROS_ASSERT(output_topics.size()==(int)number_hand_joints_);
     
       for (int32_t i = 0; i < output_topics.size(); ++i) 
 	{    
@@ -40,14 +50,15 @@ TrajectoryServer::TrajectoryServer() : nh_private_("~"),traj_loaded_(false),samp
       ROS_ERROR("No output topics specified - cannot start the Trajectory Server");
       ROS_BREAK();
     }
+   ROS_INFO("Trajectories will be published on the specified output topics");
+#endif
 
     initJointNames();
 
-
     load_traj_srv_ = nh_.advertiseService("load_trajectory",&TrajectoryServer::loadTrajectory,this);
     step_traj_srv_ = nh_.advertiseService("step_trajectory",&TrajectoryServer::stepTrajectory,this);
-    replay_traj_srv_ = nh_.advertiseService("replay_trajectory",&TrajectoryServer::replayTrajectory,this);
-    reset_hand_srv_ = nh_.advertiseService("reset_hand",&TrajectoryServer::resetHand,this);   
+    set_timestep_srv_ = nh_.advertiseService("set_timestep",&TrajectoryServer::setTimestep,this);
+    replay_traj_srv_ = nh_.advertiseService("replay_trajectory",&TrajectoryServer::replayTrajectory,this); 
     move_start_srv_ = nh_.advertiseService("move_start",&TrajectoryServer::moveStart,this);   
 }
 //-------------------------------------------------------------------
@@ -100,6 +111,7 @@ bool TrajectoryServer::loadTrajectory(sr_traj_server::LoadTrajectory::Request &r
       return res.success;
     }
 
+  timestep_= trajectory_parser_->getTimestep();
   traj_loaded_=true;
   sample_id_=0;
   lock_.unlock();
@@ -110,47 +122,77 @@ bool TrajectoryServer::loadTrajectory(sr_traj_server::LoadTrajectory::Request &r
 //-------------------------------------------------------------------
 bool TrajectoryServer::stepTrajectory(sr_traj_server::StepTrajectory::Request &req, sr_traj_server::StepTrajectory::Response &res)
   {
+   lock_.lock();
+  if(!traj_loaded_)
+    {
+      ROS_ERROR("No trajectory loaded - cannot step");
+      lock_.unlock();
+      return false;
+    }
+
+
+
+  lock_.unlock();
     return true;
   }
+//-------------------------------------------------------------------
+bool TrajectoryServer::setTimestep(sr_traj_server::SetTimestep::Request &req, sr_traj_server::SetTimestep::Response &res)
+{
+ lock_.lock();
+  if(!traj_loaded_)
+    {
+      ROS_ERROR("No trajectory loaded - cannot set the timestep");
+      lock_.unlock();
+      return false;
+    }
+
+  if(req.td <= 0)
+    {
+    ROS_ERROR("Timestep has to be larger than 0");
+    lock_.unlock();
+    return false;
+    }
+
+  timestep_=req.td;
+  lock_.unlock();
+
+  ROS_INFO("Timestep set to %f",timestep_);
+  return true;
+}
 //-------------------------------------------------------------------
 bool TrajectoryServer::replayTrajectory(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 {
   
-
+  lock_.lock();
   
-  // Eigen::VectorXd state_vec(number_hand_joints_);
-  // unsigned int sample_id=0;
-  // unsigned int num_samples=trajectory_parser_->getNumSamples();
+  unsigned int num_samples=trajectory_parser_->getNumSamples();
+  unsigned int init_sample=sample_id_;
 
-  // if((req.n_samples == 0) || (req.n_samples > num_samples))
-  //   ROS_WARN("Invalid sample number specified. Using %d samples.",num_samples);
-  // else
-  //   num_samples=req.n_samples;
+  struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
+  while (ros::ok() && (sample_id_ < num_samples))
+    {
+      gettimeofday(&start,0);
 
-  // struct timeval start, now; //using a handmade timer since the ros::Rate stuff made problems with the sim_time/real_time distinction
-  // while (ros::ok() && (sample_id < num_samples))
-  //   {
-  //     gettimeofday(&start,0);
-
-  //     state_vec=getStateVector(sample_id);
-
-  //     std_msgs::Float64 joint_angle;
-  //     for(unsigned int i=0;i<output_pubs_.size();i++)
-  // 	{
-  // 	  joint_angle.data=state_vec(i)/RAD;
-  // 	  output_pubs_[i].publish(joint_angle);
-  // 	}
-  //     sample_id+=1;
+#ifdef SENDUPDATE
+       publishSendupdate();
+#else
+       publish();
+#endif
+      
+      sample_id_+=1;
  
-  //     while(1)
-  // 	{
-  // 	  gettimeofday(&now,0);
-  // 	  if((now.tv_sec - start.tv_sec + 0.000001 * (now.tv_usec - start.tv_usec)) >= trajectory_parser_->getTimestep())
-  // 	    break;
-  // 	}
-  //   }
-  return true;
+      while(1)
+  	{
+  	  gettimeofday(&now,0);
+  	  if((now.tv_sec - start.tv_sec + 0.000001 * (now.tv_usec - start.tv_usec)) >= timestep_)
+  	    break;
+  	}
+    }
 
+  lock_.unlock();
+
+  ROS_INFO("Finished replaying the trajectory from samples %d to %d",init_sample,sample_id_); //CHECK if the final sample is correct or shifted by 1!!!!!!!!!!
+  return true;
 
 }
 //-------------------------------------------------------------------
@@ -158,41 +200,7 @@ Eigen::VectorXd TrajectoryServer::getStateVector(unsigned int sample)
 {
   return trajectory_parser_->getTrajectories()->block<number_hand_joints_,1>(0,sample);
 }
-//-------------------------------------------------------------------
-bool TrajectoryServer::resetHand(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
-{
-  std::vector<std_msgs::Float64> init_pos(number_hand_joints_);
-  init_pos[0].data=1/RAD;
-  init_pos[1].data=1/RAD;
-  init_pos[2].data=1/RAD;
-  init_pos[3].data=1/RAD;
-  init_pos[4].data=1/RAD;
-  init_pos[5].data=1/RAD;
-  init_pos[6].data=1/RAD;
-  init_pos[7].data=-5/RAD;
-  init_pos[8].data=1/RAD;
-  init_pos[9].data=1/RAD;
-  init_pos[10].data=-1/RAD;
-  init_pos[11].data=1/RAD;
-  init_pos[12].data=1/RAD;
-  init_pos[13].data=-1/RAD;
-  init_pos[14].data=1/RAD;
-  init_pos[15].data=1/RAD;
-  init_pos[16].data=-1/RAD;
-  init_pos[17].data=1/RAD;
-  init_pos[18].data=1/RAD;
-  init_pos[19].data=1/RAD;
 
-  lock_.lock();
- 
-  for(unsigned int i=0;i<output_pubs_.size();i++)
-    output_pubs_[i].publish(init_pos[i]);
-
-  lock_.unlock();
-
-  ROS_INFO("Hand reseted");
-  return true;
-}
 //------------------------------------------------------------------------------------------------------
 bool TrajectoryServer::moveStart(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 {
@@ -204,18 +212,49 @@ bool TrajectoryServer::moveStart(std_srvs::Empty::Request &req, std_srvs::Empty:
       return false;
     }
 
-  Eigen::VectorXd start=getStateVector(0);
-  std_msgs::Float64 joint_angle;
-  for(unsigned int i=0;i<output_pubs_.size();i++)
-    {
-      joint_angle.data=start(i);
-      output_pubs_[i].publish(joint_angle);
-    }
+  sample_id_=0;
+
+#ifdef SENDUPDATE
+       publishSendupdate();
+#else
+       publish();
+#endif
+
   lock_.unlock();
 
   ROS_INFO("Moved to start pose");
   return true;
 }
 //------------------------------------------------------------------------------------------------------
+#ifdef SENDUPDATE
+void TrajectoryServer::publishSendupdate()
+{
 
+ Eigen::VectorXd state_vec=getStateVector(sample_id_);
+ sr_robot_msgs::sendupdate sud;
+ sr_robot_msgs::joint joint;
 
+ sud.sendupdate_length=number_hand_joints_;  
+ for (unsigned int i=0; i < number_hand_joints_;i++)
+   {
+     joint.joint_name=joint_names_[i];
+     joint.joint_target=state_vec(i);
+     sud.sendupdate_list.push_back(joint);
+   } 
+
+ sendupdate_pub_.publish(sud);
+}
+#else
+//------------------------------------------------------------------------------------------------------
+void TrajectoryServer::publish()
+{
+ Eigen::VectorXd state_vec=getStateVector(sample_id_);
+      std_msgs::Float64 joint_angle;
+      for(unsigned int i=0;i<number_hand_joints_;i++)
+  	{
+  	  joint_angle.data=state_vec(i)/RAD;
+  	  output_pubs_[i].publish(joint_angle);
+  	}
+}
+#endif
+//------------------------------------------------------------------------------------------------------

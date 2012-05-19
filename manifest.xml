@@ -12,6 +12,7 @@
   <depend package="eigen"/>
   <depend package="std_msgs"/>
   <depend package="std_srvs"/>
+  <depend package="sr_robot_msgs"/>
   <rosdep name="boost"/>
 </package>
 
