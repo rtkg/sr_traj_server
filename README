@@ -24,7 +24,7 @@ WRJ1
 WRJ2 
 
 
-The server node publishes on /srh/sendupdate. The default trajectories folder can be
+The server node publishes on either the sendupdate topics (when built via SENDUPDATE=1 rosmake sr_traj_server) or on the output topics specified in the .yaml file in $PACKAGE_ROOT/config folder. The default trajectories folder can be
 specified in the sr_traj_server.launch file. Run the server via 
 'roslaunch sr_traj_server sr_traj_server.launch'. A service 
 /sr_trajectory_server/replay_traj is provided which expects a string with the local 

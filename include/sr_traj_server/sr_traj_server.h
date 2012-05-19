@@ -20,6 +20,7 @@
 
 #define RAD 57.2957795
 
+//-------------------------------------------------------------------
 class TrajectoryServer
 {
  public:
@@ -42,6 +43,7 @@ class TrajectoryServer
   ros::ServiceServer step_traj_srv_;
   ros::ServiceServer move_start_srv_;
   ros::ServiceServer set_timestep_srv_;
+
 #ifdef SENDUPDATE
    ros::Publisher sendupdate_pub_;
 #else
@@ -56,12 +58,6 @@ class TrajectoryServer
    */
   Eigen::VectorXd getStateVector(unsigned int sample);
 
- /**
-   * Creates a sendupdate message from the given joint state vector
-   *
-   * @param state_vec - vector containing the joint angles
-   */
- 
    void initJointNames();
 
 #ifdef SENDUPDATE
@@ -80,6 +76,12 @@ class TrajectoryServer
    bool moveStart(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
    bool replayTrajectory(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 }; // end class
-
-
+//-------------------------------------------------------------------
+  /**
+   * Templated signum function 
+   */
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+//-------------------------------------------------------------------
 #endif 	
